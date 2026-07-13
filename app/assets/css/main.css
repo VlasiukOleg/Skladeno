@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+
+body {
+  font-family: 'Nunito', sans-serif;
+}
+
+h1, h2, h3, .font-black {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
