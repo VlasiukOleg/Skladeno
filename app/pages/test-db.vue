@@ -19,6 +19,9 @@ const imageFile = ref<File | null>(null)
 const fileInputKey = ref(0) // Для скидання поля файлу
 const isAdding = ref(false)
 
+const isDeleteModalOpen = ref(false)
+const materialToDeleteId = ref<any>(null)
+
 async function addMaterial() {
   if (!newItem.name) {
     errorMessage.value = "Назва матеріалу обов'язкова";
@@ -84,6 +87,29 @@ async function addMaterial() {
   }
 }
 
+
+function openDeleteModal(id: any) {
+  materialToDeleteId.value = id;
+  isDeleteModalOpen.value = true;
+}
+
+async function confirmDeleteMaterial() {
+  if (!materialToDeleteId.value) return;
+  
+  try {
+    const { error } = await supabase.from('materials').delete().eq('id', materialToDeleteId.value);
+    if (error) throw error;
+    
+    // Оновлюємо список після видалення
+    materials.value = materials.value.filter(m => m.id !== materialToDeleteId.value);
+  } catch (error: any) {
+    console.error('Помилка видалення:', error);
+    errorMessage.value = "Помилка при видаленні: " + error.message;
+  } finally {
+    isDeleteModalOpen.value = false;
+    materialToDeleteId.value = null;
+  }
+}
 
 async function fetchMaterials() {
   isLoading.value = true
@@ -157,11 +183,22 @@ onMounted(() => {
             </div>
           </div>
           
-          <UBadge color="primary" variant="subtle" v-if="item.quantity || item.price">
-            <span v-if="item.quantity">{{ item.quantity }} шт</span>
-            <span v-if="item.quantity && item.price"> • </span>
-            <span v-if="item.price">{{ item.price }} ₴</span>
-          </UBadge>
+          <div class="flex items-center gap-3">
+            <UBadge color="primary" variant="subtle" v-if="item.quantity || item.price">
+              <span v-if="item.quantity">{{ item.quantity }} шт</span>
+              <span v-if="item.quantity && item.price"> • </span>
+              <span v-if="item.price">{{ item.price }} ₴</span>
+            </UBadge>
+            
+            <UButton 
+              color="error" 
+              variant="ghost" 
+              icon="i-lucide-trash-2" 
+              size="sm"
+              title="Видалити"
+              @click="openDeleteModal(item.id)" 
+            />
+          </div>
         </li>
       </ul>
 
@@ -216,4 +253,28 @@ onMounted(() => {
       </template>
     </UPageCard>
   </UContainer>
+
+  <!-- Модальне вікно підтвердження видалення -->
+  <UModal
+    v-model:open="isDeleteModalOpen"
+    title="Видалити матеріал?"
+    description="Ви впевнені, що хочете видалити цей матеріал? Цю дію неможливо скасувати."
+  >
+    <template #footer>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton
+          color="neutral"
+          variant="outline"
+          label="Скасувати"
+          @click="() => { isDeleteModalOpen = false }"
+        />
+        <UButton
+          color="error"
+          variant="solid"
+          label="Так, видалити"
+          @click="confirmDeleteMaterial"
+        />
+      </div>
+    </template>
+  </UModal>
 </template>
