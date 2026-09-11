@@ -60,7 +60,7 @@ async function submitManualText() {
 
       <!-- Таб 2: Ручне введення ("Блокнот") -->
       <template #manual>
-        <div v-if="isAnalyzing" class="pt-4 min-h-[300px] flex items-center justify-center">
+        <div v-if="isAnalyzing" class="pt-4 min-h-75 flex items-center justify-center">
           <AntLoader text="Мураха-кошторисник аналізує ваш список..." />
         </div>
         <div v-else class="pt-4 space-y-4">

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref } from "vue";
 import type { TableColumn, DropdownMenuItem } from "@nuxt/ui";
 import { useClipboard } from "@vueuse/core";
@@ -91,6 +91,24 @@ const buildingTypeOptions = ["Новобудова", "Старий фонд", "�
 const elevatorTypeOptions = ["Відсутній", "Пасажирський", "Вантажний"];
 const carryDistanceOptions = ["До 15 м", "15 - 30 м", "Більше 30 м"];
 
+const totalWeight = computed(() => {
+  return items.reduce((acc, item) => {
+    if (item.matchedItem && item.matchedItem.weight) {
+      return acc + item.quantity * item.matchedItem.weight;
+    }
+    return acc;
+  }, 0);
+});
+
+const totalVolume = computed(() => {
+  return items.reduce((acc, item) => {
+    if (item.matchedItem && item.matchedItem.volume) {
+      return acc + item.quantity * item.matchedItem.volume;
+    }
+    return acc;
+  }, 0);
+});
+
 const deliveryPrice = computed(() => {
   if (!isDeliveryEnabled.value) return 0;
   if (deliveryCity.value !== "Київ") return 0; // Менеджер розрахує індивідуально
@@ -111,24 +129,6 @@ const totalSum = computed(() => {
     return acc;
   }, 0);
   return materialsSum + deliveryPrice.value;
-});
-
-const totalWeight = computed(() => {
-  return items.reduce((acc, item) => {
-    if (item.matchedItem && item.matchedItem.weight) {
-      return acc + item.quantity * item.matchedItem.weight;
-    }
-    return acc;
-  }, 0);
-});
-
-const totalVolume = computed(() => {
-  return items.reduce((acc, item) => {
-    if (item.matchedItem && item.matchedItem.volume) {
-      return acc + item.quantity * item.matchedItem.volume;
-    }
-    return acc;
-  }, 0);
 });
 
 // --- 2. КОЛОНКИ ТАБЛИЦІ ---
@@ -211,7 +211,7 @@ function selectCheapest(item: MaterialItem) {
     const cheapest = [...item.matchedItems].sort(
       (a, b) => a.price - b.price,
     )[0];
-    item.matchedItem = cheapest;
+    item.matchedItem = cheapest || null;
   }
   item.needsClarification = false;
 }
@@ -226,17 +226,17 @@ function selectCheapest(item: MaterialItem) {
           <UIcon
             v-if="loadingStates[row.original.id]"
             name="i-lucide-loader-2"
-            class="text-primary w-5 h-5 flex-shrink-0 animate-spin"
+            class="text-primary w-5 h-5 shrink-0 animate-spin"
           />
           <UIcon
             v-else-if="row.original.needsClarification"
             name="i-lucide-alert-circle"
-            class="text-red-500 w-5 h-5 flex-shrink-0"
+            class="text-red-500 w-5 h-5 shrink-0"
           />
           <UIcon
             v-else
             name="i-lucide-check-circle"
-            class="text-green-500 w-5 h-5 flex-shrink-0"
+            class="text-green-500 w-5 h-5 shrink-0"
           />
           <span
             :class="
@@ -244,7 +244,7 @@ function selectCheapest(item: MaterialItem) {
                 ? 'text-red-500 font-medium'
                 : 'text-gray-700'
             "
-            class="whitespace-normal break-words max-w-[250px] text-sm"
+            class="whitespace-normal wrap-break-word max-w-62.5 text-sm"
           >
             {{ row.original.originalText }}
           </span>
@@ -321,14 +321,14 @@ function selectCheapest(item: MaterialItem) {
           <!-- Жовте попередження (уточнення) -->
           <div
             v-if="row.original.clarificationQuestion"
-            class="text-xs font-medium text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-200 leading-tight whitespace-normal break-words max-w-[400px]"
+            class="text-xs font-medium text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-200 leading-tight whitespace-normal wrap-break-word max-w-100"
           >
             {{ row.original.clarificationQuestion }}
           </div>
 
           <!-- Селект меню для вибору -->
           <USelectMenu
-            :model-value="row.original.matchedItem"
+            :model-value="row.original.matchedItem || undefined"
             :items="row.original.matchedItems"
             placeholder="Натисніть, щоб обрати варіант..."
             class="w-full"
@@ -422,11 +422,11 @@ function selectCheapest(item: MaterialItem) {
       <!-- Якщо система не знайшла товар (з уточненням або без) -->
       <div v-else class="flex flex-col gap-2 py-1">
         <div
-          class="max-w-[400px] text-xs font-medium text-red-600 flex items-start gap-2 p-2.5 bg-red-50 rounded-md border border-red-100 leading-tight whitespace-normal break-words"
+          class="max-w-100 text-xs font-medium text-red-600 flex items-start gap-2 p-2.5 bg-red-50 rounded-md border border-red-100 leading-tight whitespace-normal wrap-break-word"
         >
           <UIcon
             name="i-lucide-alert-triangle"
-            class="w-5 h-5 flex-shrink-0 mt-0.5"
+            class="w-5 h-5 shrink-0 mt-0.5"
           />
           <p>
             Система не змогла підібрати конкретні товари для цього запиту. Будь
@@ -493,7 +493,7 @@ function selectCheapest(item: MaterialItem) {
           <div
             v-if="!isDeliveryEnabled"
             class="px-4 py-3 cursor-pointer hover:bg-gray-50 flex items-center justify-center border-t border-dashed border-gray-300"
-            @click="isDeliveryEnabled = true"
+            @click="() => { isDeliveryEnabled = true }"
           >
             <span
               class="text-sm text-primary font-semibold flex items-center gap-2"
@@ -515,7 +515,7 @@ function selectCheapest(item: MaterialItem) {
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                @click="isDeliveryEnabled = false"
+                @click="() => { isDeliveryEnabled = false }"
                 aria-label="Скасувати доставку"
               />
             </div>
@@ -541,7 +541,7 @@ function selectCheapest(item: MaterialItem) {
                   class="w-full"
                 />
               </div>
-              <div class="w-full md:w-auto min-w-[150px] text-right md:mb-1">
+              <div class="w-full md:w-auto min-w-37.5 text-right md:mb-1">
                 <p
                   class="text-[10px] uppercase font-semibold text-gray-400 mb-0.5"
                 >
@@ -570,7 +570,7 @@ function selectCheapest(item: MaterialItem) {
           <div
             v-if="!isUnloadingEnabled"
             class="px-4 py-3 cursor-pointer hover:bg-gray-50 flex items-center justify-center border-t border-dashed border-gray-300"
-            @click="isUnloadingEnabled = true"
+            @click="() => { isUnloadingEnabled = true }"
           >
             <span
               class="text-sm text-primary font-semibold flex items-center gap-2"
@@ -593,7 +593,7 @@ function selectCheapest(item: MaterialItem) {
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                @click="isUnloadingEnabled = false"
+                @click="() => { isUnloadingEnabled = false }"
                 aria-label="Скасувати розвантаження"
               />
             </div>
@@ -646,7 +646,7 @@ function selectCheapest(item: MaterialItem) {
                   class="w-full"
                 />
               </div>
-              <div class="w-full md:w-auto min-w-[150px] text-right md:mb-1">
+              <div class="w-full md:w-auto min-w-37.5 text-right md:mb-1">
                 <p
                   class="text-[10px] uppercase font-semibold text-gray-400 mb-0.5"
                 >
@@ -709,7 +709,7 @@ function selectCheapest(item: MaterialItem) {
             color="neutral"
             variant="ghost"
             label="Скасувати"
-            @click="isTextEditModalOpen = false"
+            @click="() => { isTextEditModalOpen = false }"
           />
           <UButton
             color="primary"
@@ -740,7 +740,7 @@ function selectCheapest(item: MaterialItem) {
             color="neutral"
             variant="ghost"
             label="Скасувати"
-            @click="isQuantityEditModalOpen = false"
+            @click="() => { isQuantityEditModalOpen = false }"
           />
           <UButton
             color="primary"
@@ -850,7 +850,7 @@ function selectCheapest(item: MaterialItem) {
               Оберіть варіант:
             </p>
             <USelectMenu
-              :model-value="item.matchedItem"
+              :model-value="item.matchedItem ?? undefined"
               :items="item.matchedItems"
               placeholder="Натисніть, щоб обрати варіант..."
               class="w-full"
@@ -920,7 +920,7 @@ function selectCheapest(item: MaterialItem) {
           >
             <UIcon
               name="i-lucide-alert-triangle"
-              class="w-5 h-5 flex-shrink-0 mt-0.5"
+              class="w-5 h-5 shrink-0 mt-0.5"
             />
             <p>
               Система не змогла підібрати конкретні товари для цього запиту.
@@ -986,12 +986,12 @@ function selectCheapest(item: MaterialItem) {
     <!-- МОБІЛЬНИЙ БЛОК ДОСТАВКИ -->
     <UCard
       class="shadow-sm mt-4 overflow-hidden"
-      :ui="{ body: { padding: 'p-0' } }"
+      :ui="{ body: 'p-0' }"
     >
       <div
         v-if="!isDeliveryEnabled"
         class="px-4 py-4 cursor-pointer hover:bg-gray-50 flex items-center justify-center border border-dashed border-gray-300 m-2 rounded-lg"
-        @click="isDeliveryEnabled = true"
+        @click="() => { isDeliveryEnabled = true }"
       >
         <span
           class="text-sm text-primary font-semibold flex items-center gap-2"
@@ -1010,7 +1010,7 @@ function selectCheapest(item: MaterialItem) {
             color="neutral"
             variant="ghost"
             size="xs"
-            @click="isDeliveryEnabled = false"
+            @click="() => { isDeliveryEnabled = false }"
             aria-label="Скасувати доставку"
           />
         </div>
@@ -1062,12 +1062,12 @@ function selectCheapest(item: MaterialItem) {
     <!-- МОБІЛЬНИЙ БЛОК РОЗВАНТАЖЕННЯ -->
     <UCard
       class="shadow-sm mt-4 overflow-hidden"
-      :ui="{ body: { padding: 'p-0' } }"
+      :ui="{ body: 'p-0' }"
     >
       <div
         v-if="!isUnloadingEnabled"
         class="px-4 py-4 cursor-pointer hover:bg-gray-50 flex items-center justify-center border border-dashed border-gray-300 m-2 rounded-lg"
-        @click="isUnloadingEnabled = true"
+        @click="() => { isUnloadingEnabled = true }"
       >
         <span
           class="text-sm text-primary font-semibold flex items-center gap-2"
@@ -1086,7 +1086,7 @@ function selectCheapest(item: MaterialItem) {
             color="neutral"
             variant="ghost"
             size="xs"
-            @click="isUnloadingEnabled = false"
+            @click="() => { isUnloadingEnabled = false }"
             aria-label="Скасувати розвантаження"
           />
         </div>
