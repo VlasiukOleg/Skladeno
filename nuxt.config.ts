@@ -3,6 +3,13 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   modules: ["@nuxt/ui", "@nuxtjs/google-fonts", "@nuxtjs/supabase"],
+  supabase: {
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      exclude: ['/update-password', '/test-db'],
+    }
+  },
   css: ["~/assets/css/main.css"],
   googleFonts: {
     families: {
