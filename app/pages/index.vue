@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import type { MaterialItem } from "../components/ReviewTable.vue";
 
 const parsedItems = ref<MaterialItem[]>([]);
+const toast = useToast();
 
 const fetchAndLogMaterials = async () => {
   console.log("=== ЗАПУСК ЗАПИТУ ПРАЙСУ ===");
@@ -70,7 +71,12 @@ const handleAddNewItem = async () => {
     newItemText.value = ""; // Очищаємо поле
   } catch (error: any) {
     console.error("Помилка при додаванні матеріалу:", error);
-    alert(error.data?.message || "Помилка при додаванні матеріалу");
+    toast.add({
+      title: 'Помилка',
+      description: error.data?.message || "Помилка при додаванні матеріалу",
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    });
   } finally {
     isAddingItem.value = false;
   }
@@ -117,7 +123,12 @@ const handleReanalyze = async (id: string, newText: string) => {
     }
   } catch (error: any) {
     console.error("Помилка при переаналізі:", error);
-    alert(error.data?.message || "Помилка при переаналізі матеріалу");
+    toast.add({
+      title: 'Помилка',
+      description: error.data?.message || "Помилка при переаналізі матеріалу",
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    });
   } finally {
     isReanalyzing.value[id] = false;
   }

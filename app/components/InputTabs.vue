@@ -5,6 +5,7 @@ const emit = defineEmits(["success"]);
 
 const isAnalyzing = ref(false);
 const manualText = ref("");
+const toast = useToast();
 
 // Налаштування табів для Nuxt UI
 const items = [
@@ -41,7 +42,18 @@ async function submitManualText() {
     emit("success", response);
   } catch (error: any) {
     console.error("Помилка при аналізі тексту:", error);
-    alert(error.data?.message || "Помилка аналізу тексту");
+    const errorMsg = error.data?.message || "Помилка аналізу тексту";
+    const isOverloaded = errorMsg.includes("503") || errorMsg.includes("high demand") || errorMsg.includes("UNAVAILABLE") || errorMsg.includes("Кроці 3");
+    
+    toast.add({
+      title: isOverloaded ? 'Сервери перевантажені' : 'Помилка',
+      description: isOverloaded 
+        ? 'Сервери штучного інтелекту Google тимчасово перевантажені. Будь ласка, зачекайте пару хвилин і спробуйте ще раз.' 
+        : errorMsg,
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+      duration: isOverloaded ? 8000 : 5000
+    });
   } finally {
     isAnalyzing.value = false;
   }

@@ -33,6 +33,7 @@ const state = reactive<Partial<Schema>>({
 });
 
 const isUploading = ref(false);
+const toast = useToast();
 
 const emit = defineEmits(["success"]);
 
@@ -54,8 +55,19 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     emit("success", response);
   } catch (error: any) {
     console.error("Помилка при відправці файлу:", error);
-    // Якщо ШІ відповість помилкою (наприклад, не розпізнає формат), ми це побачимо
-    alert(error.data?.message || "Помилка при обробці файлу");
+    
+    const errorMsg = error.data?.message || "Помилка при обробці файлу";
+    const isOverloaded = errorMsg.includes("503") || errorMsg.includes("high demand") || errorMsg.includes("UNAVAILABLE") || errorMsg.includes("Кроці 3");
+    
+    toast.add({
+      title: isOverloaded ? 'Сервери перевантажені' : 'Помилка',
+      description: isOverloaded 
+        ? 'Сервери штучного інтелекту Google тимчасово перевантажені. Будь ласка, зачекайте пару хвилин і спробуйте ще раз.' 
+        : errorMsg,
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+      duration: isOverloaded ? 8000 : 5000
+    });
   } finally {
     isUploading.value = false;
   }

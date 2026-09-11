@@ -58,7 +58,7 @@ const handleAuth = async (payload: FormSubmitEvent<any>) => {
   try {
     if (authMode.value === 'signup') {
       // Реєстрація
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -66,6 +66,12 @@ const handleAuth = async (payload: FormSubmitEvent<any>) => {
         }
       });
       if (error) throw error;
+      
+      // Перевірка на вже існуючого користувача (Supabase не видає помилку по замовчуванню через налаштування безпеки)
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error("User already registered");
+      }
+      
       successMessage.value =
         "Реєстрація успішна! Будь ласка, перевірте свою пошту для підтвердження (якщо вимагається), або увійдіть.";
       authMode.value = 'login'; // Перемикаємо на форму входу
