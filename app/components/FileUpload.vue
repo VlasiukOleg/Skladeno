@@ -86,8 +86,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       label="Image"
       description="JPG, GIF or PNG. 2MB Max."
     >
-      <div v-if="isUploading" class="min-h-48 flex items-center justify-center">
-        <AntLoader text="Мураха-кошторисник розпізнає ваш файл..." />
+      <div v-if="isUploading" class="min-h-48 flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <UIcon name="i-lucide-loader-2" class="w-10 h-10 animate-spin text-primary" />
+        <p class="text-gray-600 dark:text-gray-300 font-medium">Зачекайте, потрібен час на підбір матеріалів...</p>
       </div>
       <UFileUpload
         v-else

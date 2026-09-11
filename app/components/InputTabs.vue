@@ -10,12 +10,12 @@ const toast = useToast();
 // Налаштування табів для Nuxt UI
 const items = [
   {
-    label: "Завантажити файл",
+    label: "Завантажити",
     icon: "i-lucide-file-up",
     slot: "upload",
   },
   {
-    label: "Написати список",
+    label: "Написати",
     icon: "i-lucide-edit-3",
     slot: "manual",
   },
@@ -66,17 +66,21 @@ async function submitManualText() {
       <!-- Таб 1: Завантаження файлу (Твій існуючий компонент) -->
       <template #upload>
         <div class="pt-4">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Завантажте файл зі списком матеріалів для автоматичного аналізу:
+          </p>
           <FileUpload @success="(data) => emit('success', data)" />
         </div>
       </template>
 
       <!-- Таб 2: Ручне введення ("Блокнот") -->
       <template #manual>
-        <div v-if="isAnalyzing" class="pt-4 min-h-75 flex items-center justify-center">
-          <AntLoader text="Мураха-кошторисник аналізує ваш список..." />
+        <div v-if="isAnalyzing" class="pt-4 min-h-75 flex flex-col items-center justify-center p-8 text-center space-y-4">
+          <UIcon name="i-lucide-loader-2" class="w-10 h-10 animate-spin text-primary" />
+          <p class="text-gray-600 dark:text-gray-300 font-medium">Зачекайте, потрібен час на підбір матеріалів...</p>
         </div>
         <div v-else class="pt-4 space-y-4">
-          <p class="text-sm text-gray-500">
+          <p class="text-sm text-gray-500 dark:text-gray-400">
             Вставте скопійований список або напишіть матеріали вручну:
           </p>
 
@@ -88,9 +92,9 @@ async function submitManualText() {
 1. Гіпсокартон вологостійкий - 10 шт
 2. Профіль CD 60 - 15 шт
 3. Саморізи - 1 уп..."
-            class="w-full font-mono text-gray-800"
+            class="w-full font-mono text-gray-800 dark:text-gray-200"
             :ui="{
-              base: 'bg-yellow-50/50 focus:bg-yellow-50/80 transition-colors',
+              base: 'bg-yellow-50/50 dark:bg-gray-800 focus:bg-yellow-50/80 dark:focus:bg-gray-700 transition-colors',
             }"
           />
 

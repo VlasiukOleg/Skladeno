@@ -24,3 +24,12 @@ h1, h2, h3, .font-black {
   font-weight: 900;
   letter-spacing: -0.02em;
 }
+
+/* Примусовий перенос тексту для довгих назв у випадаючих списках Nuxt UI */
+[role="option"] .truncate,
+button[aria-haspopup="listbox"] .truncate {
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+  word-break: break-word !important;
+}

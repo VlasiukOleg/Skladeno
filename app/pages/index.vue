@@ -165,22 +165,7 @@ onMounted(() => {
 
 <template>
   <UContainer class="py-8">
-      <!-- Заголовок -->
-      <div class="mb-8 flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900">Skladeno</h1>
-          <p class="text-gray-500 mt-1">Швидкий прорахунок будматеріалів</p>
-        </div>
-        <div class="flex items-center gap-4" v-if="user">
-          <span class="text-sm text-gray-600">{{ user.email }}</span>
-          <UButton
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-log-out"
-            @click="handleLogout"
-          />
-        </div>
-      </div>
+
 
       <!-- Використовуємо новий компонент з табами замість FileUpload -->
       <InputTabs

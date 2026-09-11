@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref } from "vue";
 import type { TableColumn, DropdownMenuItem } from "@nuxt/ui";
 import { useClipboard } from "@vueuse/core";
@@ -332,12 +332,16 @@ function selectCheapest(item: MaterialItem) {
             :items="row.original.matchedItems"
             placeholder="Натисніть, щоб обрати варіант..."
             class="w-full"
+            :ui="{
+              value: 'whitespace-normal break-words text-left leading-snug line-clamp-2 text-xs',
+              itemLabel: 'whitespace-normal break-words text-left leading-tight line-clamp-2 w-full'
+            }"
             @update:model-value="
               (val: any) => selectAlternative(row.original, val)
             "
           >
             <template #default>
-              <span v-if="row.original.matchedItem" class="truncate">{{
+              <span v-if="row.original.matchedItem" class="text-xs whitespace-normal wrap-break-word text-left leading-snug line-clamp-2 w-full">{{
                 row.original.matchedItem.label
               }}</span>
               <span v-else class="truncate text-gray-500"
@@ -346,9 +350,9 @@ function selectCheapest(item: MaterialItem) {
             </template>
 
             <template #item-label="{ item }">
-              <div class="flex justify-between w-full items-center gap-2">
-                <span class="truncate text-xs">{{ item.label }}</span>
-                <span class="text-primary font-bold text-xs whitespace-nowrap"
+              <div class="flex justify-between w-full items-start gap-2 py-1">
+                <span class="text-[11px] whitespace-normal wrap-break-word flex-1 text-left leading-tight line-clamp-2">{{ item.label }}</span>
+                <span class="text-primary font-bold text-[11px] whitespace-nowrap mt-0.5"
                   >{{ item.price.toFixed(2) }} ₴</span
                 >
               </div>
@@ -388,6 +392,10 @@ function selectCheapest(item: MaterialItem) {
                 )
               "
               class="w-full"
+              :ui="{
+                value: 'whitespace-normal break-words text-left leading-snug line-clamp-2 text-xs',
+                itemLabel: 'whitespace-normal break-words text-left leading-tight line-clamp-2 w-full'
+              }"
               @update:model-value="
                 (val: any) => selectAlternative(row.original, val)
               "
