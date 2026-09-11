@@ -1,6 +1,20 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+@theme static {
+  /* Override default green color to #26A69A */
+  --color-green-50: #f1fcfb;
+  --color-green-100: #e1f9f5;
+  --color-green-200: #c5f2eb;
+  --color-green-300: #99e6db;
+  --color-green-400: #64d4c7;
+  --color-green-500: #26a69a;
+  --color-green-600: #1c8c82;
+  --color-green-700: #187069;
+  --color-green-800: #155955;
+  --color-green-900: #134947;
+  --color-green-950: #082b2b;
+}
 
 body {
   font-family: 'Nunito', sans-serif;
