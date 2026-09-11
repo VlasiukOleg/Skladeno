@@ -9,29 +9,59 @@ const materials = ref<any[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 
-const newItem = reactive({
+const materialForm = reactive({
   name: '',
   description: '',
   quantity: undefined as number | undefined,
   price: undefined as number | undefined
 })
 const imageFile = ref<File | null>(null)
-const fileInputKey = ref(0) // Для скидання поля файлу
-const isAdding = ref(false)
+const fileInputKey = ref(0)
+const isSaving = ref(false)
+
+const isFormModalOpen = ref(false)
+const modalMode = ref<'add' | 'edit'>('add')
+const editingMaterialId = ref<any>(null)
+
+function openAddModal() {
+  modalMode.value = 'add';
+  editingMaterialId.value = null;
+  materialForm.name = '';
+  materialForm.description = '';
+  materialForm.quantity = undefined;
+  materialForm.price = undefined;
+  imageFile.value = null;
+  fileInputKey.value++;
+  errorMessage.value = '';
+  isFormModalOpen.value = true;
+}
+
+function openEditModal(item: any) {
+  modalMode.value = 'edit';
+  editingMaterialId.value = item.id;
+  materialForm.name = item.name || '';
+  materialForm.description = item.description || '';
+  materialForm.quantity = item.quantity;
+  materialForm.price = item.price;
+  imageFile.value = null;
+  fileInputKey.value++;
+  errorMessage.value = '';
+  isFormModalOpen.value = true;
+}
 
 const isDeleteModalOpen = ref(false)
 const materialToDeleteId = ref<any>(null)
 
-async function addMaterial() {
-  if (!newItem.name) {
+async function saveMaterial() {
+  if (!materialForm.name) {
     errorMessage.value = "Назва матеріалу обов'язкова";
     return;
   }
-  isAdding.value = true;
+  isSaving.value = true;
   errorMessage.value = '';
   
   try {
-    let uploadedImageUrl = null;
+    let uploadedImageUrl = undefined;
     
     // 1. Якщо є файл, завантажуємо його в Storage
     if (imageFile.value) {
@@ -44,7 +74,6 @@ async function addMaterial() {
         
       if (uploadError) throw new Error("Помилка завантаження фото: " + uploadError.message);
       
-      // Отримуємо публічне посилання
       const { data: publicUrlData } = supabase.storage
         .from('material-images')
         .getPublicUrl(fileName);
@@ -52,38 +81,45 @@ async function addMaterial() {
       uploadedImageUrl = publicUrlData.publicUrl;
     }
 
-    // 2. Зберігаємо запис в базу
-    const { data, error } = await supabase.from('materials').insert([
-      { 
-        name: newItem.name, 
-        description: newItem.description, 
-        quantity: newItem.quantity, 
-        price: newItem.price,
-        image_url: uploadedImageUrl
-      }
-    ]).select();
-    
-    if (error) throw error;
-    
-    // Очищаємо форму
-    newItem.name = '';
-    newItem.description = '';
-    newItem.quantity = undefined;
-    newItem.price = undefined;
-    imageFile.value = null;
-    fileInputKey.value++; // Примусово оновлюємо інпут файлу, щоб очистити його
-    
-    // Додаємо новий запис в список без перезавантаження
-    if (data && data.length > 0) {
-      materials.value.push(data[0]);
-    } else {
-      await fetchMaterials();
+    const payload: any = { 
+        name: materialForm.name, 
+        description: materialForm.description, 
+        quantity: materialForm.quantity, 
+        price: materialForm.price,
+    };
+    if (uploadedImageUrl !== undefined) {
+        payload.image_url = uploadedImageUrl;
     }
+
+    if (modalMode.value === 'add') {
+      const { data, error } = await supabase.from('materials').insert([payload]).select();
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        materials.value.push(data[0]);
+      } else {
+        await fetchMaterials();
+      }
+    } else {
+      const { data, error } = await supabase.from('materials').update(payload).eq('id', editingMaterialId.value).select();
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const index = materials.value.findIndex(m => m.id === editingMaterialId.value);
+        if (index !== -1) {
+          materials.value[index] = data[0];
+        }
+      } else {
+        await fetchMaterials();
+      }
+    }
+    
+    isFormModalOpen.value = false;
   } catch (error: any) {
-    console.error('Помилка додавання:', error);
-    errorMessage.value = "Помилка при додаванні (можливо RLS блокує запис): " + error.message;
+    console.error('Помилка збереження:', error);
+    errorMessage.value = "Помилка при збереженні: " + error.message;
   } finally {
-    isAdding.value = false;
+    isSaving.value = false;
   }
 }
 
@@ -141,7 +177,10 @@ onMounted(() => {
       <template #header>
         <div class="flex items-center justify-between">
           <h1 class="text-2xl font-bold">Тестова база даних (Матеріали)</h1>
-          <UButton icon="i-lucide-refresh-cw" variant="ghost" @click="fetchMaterials" :loading="isLoading" />
+          <div class="flex items-center gap-2">
+            <UButton icon="i-lucide-plus" color="primary" @click="openAddModal">Додати матеріал</UButton>
+            <UButton icon="i-lucide-refresh-cw" variant="ghost" @click="fetchMaterials" :loading="isLoading" />
+          </div>
         </div>
       </template>
 
@@ -191,6 +230,14 @@ onMounted(() => {
             </UBadge>
             
             <UButton 
+              color="primary" 
+              variant="ghost" 
+              icon="i-lucide-pencil" 
+              size="sm"
+              title="Редагувати"
+              @click="openEditModal(item)" 
+            />
+            <UButton 
               color="error" 
               variant="ghost" 
               icon="i-lucide-trash-2" 
@@ -202,57 +249,65 @@ onMounted(() => {
         </li>
       </ul>
 
-      <UDivider class="my-6" />
 
-      <!-- Форма додавання нового матеріалу -->
-      <div>
-        <h3 class="text-lg font-medium mb-4">Додати новий матеріал</h3>
-        <form @submit.prevent="addMaterial" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UFormGroup label="Назва матеріалу" required>
-              <UInput v-model="newItem.name" placeholder="Наприклад: Цемент М500" />
-            </UFormGroup>
-            
-            <UFormGroup label="Ціна (₴)">
-              <UInput v-model="newItem.price" type="number" placeholder="250.50" />
-            </UFormGroup>
-
-            <UFormGroup label="Кількість (шт)">
-              <UInput v-model="newItem.quantity" type="number" placeholder="10" />
-            </UFormGroup>
-            
-            <UFormGroup label="Опис">
-              <UInput v-model="newItem.description" placeholder="Короткий опис..." />
-            </UFormGroup>
-            
-            <UFormGroup label="Зображення (опціонально)">
-              <UFileUpload 
-                :key="fileInputKey"
-                v-model="imageFile"
-                accept="image/*" 
-                icon="i-lucide-camera"
-              />
-            </UFormGroup>
-          </div>
-          
-          <div class="flex justify-end mt-4">
-            <UButton 
-              type="submit" 
-              color="primary" 
-              icon="i-lucide-plus" 
-              label="Додати в базу" 
-              :loading="isAdding" 
-              :disabled="!newItem.name"
-            />
-          </div>
-        </form>
-      </div>
       
       <template #footer>
         <p class="text-xs text-gray-400 text-center">Дані завантажено напряму з Supabase</p>
       </template>
     </UPageCard>
   </UContainer>
+
+  <!-- Модальне вікно додавання/редагування матеріалу -->
+  <UModal v-model:open="isFormModalOpen" :title="modalMode === 'add' ? 'Додати новий матеріал' : 'Редагувати матеріал'">
+    <template #body>
+      <form @submit.prevent="saveMaterial" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <UFormGroup label="Назва матеріалу" required>
+            <UInput v-model="materialForm.name" placeholder="Наприклад: Цемент М500" />
+          </UFormGroup>
+          
+          <UFormGroup label="Ціна (₴)">
+            <UInput v-model="materialForm.price" type="number" placeholder="250.50" />
+          </UFormGroup>
+
+          <UFormGroup label="Кількість (шт)">
+            <UInput v-model="materialForm.quantity" type="number" placeholder="10" />
+          </UFormGroup>
+          
+          <UFormGroup label="Опис">
+            <UInput v-model="materialForm.description" placeholder="Короткий опис..." />
+          </UFormGroup>
+          
+          <UFormGroup label="Зображення (опціонально)">
+            <UFileUpload 
+              :key="fileInputKey"
+              v-model="imageFile"
+              accept="image/*" 
+              icon="i-lucide-camera"
+            />
+          </UFormGroup>
+        </div>
+        
+        <div class="flex justify-end mt-4 gap-3">
+          <UButton 
+            type="button"
+            color="neutral" 
+            variant="outline"
+            label="Скасувати"
+            @click="() => { isFormModalOpen = false }"
+          />
+          <UButton 
+            type="submit" 
+            color="primary" 
+            :icon="modalMode === 'add' ? 'i-lucide-plus' : 'i-lucide-save'" 
+            :label="modalMode === 'add' ? 'Додати' : 'Зберегти'" 
+            :loading="isSaving" 
+            :disabled="!materialForm.name"
+          />
+        </div>
+      </form>
+    </template>
+  </UModal>
 
   <!-- Модальне вікно підтвердження видалення -->
   <UModal
