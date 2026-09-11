@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-  modules: ["@nuxt/ui", "@nuxtjs/google-fonts"],
+  modules: ["@nuxt/ui", "@nuxtjs/google-fonts", "@nuxtjs/supabase"],
   css: ["~/assets/css/main.css"],
   googleFonts: {
     families: {
@@ -14,6 +14,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     geminiApiKey: "",
     googleApiKey: "", // Nuxt сам підставить сюди значення з NUXT_GEMINI_API_KEY
+    supabaseUrl: "",
+    supabaseKey: "",
     public: {
       /* твої інші налаштування */
     },
