@@ -12,12 +12,14 @@ const handleLogout = async () => {
 
 const userMenuItems = computed(() => {
   if (!user.value) return []
+  const displayName = user.value.user_metadata?.full_name || user.value.email || 'Профіль'
+  
   return [
     [
       {
-        label: user.value.email || 'Профіль',
+        label: displayName,
         disabled: true,
-        class: 'font-semibold'
+        class: 'font-semibold text-gray-900 dark:text-white'
       }
     ],
     [
@@ -75,7 +77,7 @@ const userMenuItems = computed(() => {
     </UHeader>
 
     <!-- Основний контент сторінки -->
-    <main class="flex-1">
+    <main class="flex-1 flex flex-col">
       <slot />
     </main>
   </div>

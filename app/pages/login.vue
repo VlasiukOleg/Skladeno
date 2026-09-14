@@ -99,6 +99,31 @@ const handleAuth = async (payload: FormSubmitEvent<any>) => {
   }
 };
 
+const loginWithGoogle = async () => {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/confirm`,
+      }
+    });
+    if (error) throw error;
+  } catch (error: any) {
+    errorMessage.value = error.message || "Помилка при вході через Google.";
+  }
+};
+
+const providers = computed(() => {
+  if (authMode.value === 'forgotPassword') return [];
+  return [{
+    label: 'Google',
+    icon: 'i-simple-icons-google',
+    color: 'neutral' as const,
+    variant: 'subtle' as const,
+    onClick: loginWithGoogle
+  }];
+});
+
 const setMode = (mode: 'login' | 'signup' | 'forgotPassword') => {
   authMode.value = mode;
   errorMessage.value = "";
@@ -107,10 +132,11 @@ const setMode = (mode: 'login' | 'signup' | 'forgotPassword') => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="flex-1 flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <UPageCard class="w-full max-w-md bg-white">
       <UAuthForm
         :fields="fields"
+        :providers="providers"
         :title="authMode === 'signup' ? 'Створіть акаунт' : authMode === 'forgotPassword' ? 'Відновлення пароля' : 'З поверненням!'"
         icon="i-lucide-lock"
         :submit="{

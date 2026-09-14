@@ -4,6 +4,7 @@ import { ref, onMounted } from 'vue'
 // У Nuxt завдяки модулю @nuxtjs/supabase нам не треба вручну створювати клієнта, 
 // ми просто використовуємо готовий composable:
 const supabase = useSupabaseClient<any>()
+const user = useSupabaseUser()
 
 const materials = ref<any[]>([])
 const isLoading = ref(true)
@@ -81,15 +82,26 @@ async function saveMaterial() {
       uploadedImageUrl = publicUrlData.publicUrl;
     }
 
+    // Отримуємо актуального юзера безпосередньо з клієнта Supabase
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) {
+      errorMessage.value = "Помилка: ви не авторизовані!";
+      return;
+    }
+
     const payload: any = { 
         name: materialForm.name, 
         description: materialForm.description, 
         quantity: materialForm.quantity, 
         price: materialForm.price,
+        user_id: authUser.id,
     };
     if (uploadedImageUrl !== undefined) {
         payload.image_url = uploadedImageUrl;
     }
+
+    console.log("Відправляємо дані в базу:", payload);
 
     if (modalMode.value === 'add') {
       const { data, error } = await supabase.from('materials').insert([payload]).select();
@@ -258,7 +270,11 @@ onMounted(() => {
   </UContainer>
 
   <!-- Модальне вікно додавання/редагування матеріалу -->
-  <UModal v-model:open="isFormModalOpen" :title="modalMode === 'add' ? 'Додати новий матеріал' : 'Редагувати матеріал'">
+  <UModal 
+    v-model:open="isFormModalOpen" 
+    :title="modalMode === 'add' ? 'Додати новий матеріал' : 'Редагувати матеріал'"
+    :ui="{ overlay: 'bg-black/50 dark:bg-black/80 backdrop-blur-sm' }"
+  >
     <template #body>
       <form @submit.prevent="saveMaterial" class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -314,6 +330,7 @@ onMounted(() => {
     v-model:open="isDeleteModalOpen"
     title="Видалити матеріал?"
     description="Ви впевнені, що хочете видалити цей матеріал? Цю дію неможливо скасувати."
+    :ui="{ overlay: 'bg-black/50 dark:bg-black/80 backdrop-blur-sm' }"
   >
     <template #footer>
       <div class="flex justify-end gap-3 w-full">

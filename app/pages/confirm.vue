@@ -10,6 +10,16 @@ watch(user, () => {
     return navigateTo(path || '/') 
   }
 }, { immediate: true })
+
+onMounted(() => {
+  // Якщо за 3 секунди авторизація не відбулася (наприклад, юзер просто ввів цю адресу вручну),
+  // перекидаємо його на сторінку логіну, щоб він не дивився вічно на спінер.
+  setTimeout(() => {
+    if (!user.value) {
+      navigateTo('/login')
+    }
+  }, 3000)
+})
 </script>
 
 <template>

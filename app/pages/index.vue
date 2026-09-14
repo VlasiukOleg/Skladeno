@@ -384,6 +384,7 @@ onMounted(() => {
       v-model:open="isClearModalOpen"
       title="Очистити список?"
       description="Ви впевнені, що хочете видалити всі матеріали та почати заново? Цю дію неможливо скасувати."
+      :ui="{ overlay: 'bg-black/50 dark:bg-black/80 backdrop-blur-sm' }"
     >
       <template #footer>
         <div class="flex justify-end gap-3 w-full">
