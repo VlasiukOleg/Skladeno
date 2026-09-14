@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import type { MaterialItem } from "../components/ReviewTable.vue";
+import ExcelJS from "exceljs";
+import * as htmlToImage from "html-to-image";
 
 const parsedItems = ref<MaterialItem[]>([]);
 const toast = useToast();
@@ -149,6 +151,135 @@ const clearList = () => {
   isClearModalOpen.value = false;
 };
 
+const totalScreenshotSum = computed(() => {
+  return parsedItems.value.reduce((acc, item) => {
+    return acc + (item.matchedItem ? item.quantity * item.matchedItem.price : 0);
+  }, 0);
+});
+
+const isScreenshotting = ref(false);
+
+const downloadScreenshot = async () => {
+  const element = document.getElementById('screenshot-container');
+  if (!element) return;
+  
+  isScreenshotting.value = true;
+  try {
+    const dataUrl = await htmlToImage.toPng(element, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2 // better resolution
+    });
+    
+    const link = document.createElement('a');
+    link.download = 'skladeno-materials.png';
+    link.href = dataUrl;
+    link.click();
+  } catch (err) {
+    console.error("Помилка при створенні скріншоту:", err);
+    toast.add({
+      title: 'Помилка',
+      description: 'Не вдалося створити скріншот',
+      color: 'error'
+    });
+  } finally {
+    isScreenshotting.value = false;
+  }
+};
+
+const exportToExcel = async () => {
+  if (parsedItems.value.length === 0) return;
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Матеріали');
+
+  // Визначаємо колонки
+  worksheet.columns = [
+    { header: 'Товар', key: 'name', width: 50 },
+    { header: 'Кількість', key: 'quantity', width: 15 },
+    { header: 'Ціна з ПДВ', key: 'price', width: 20 },
+    { header: 'Сума з ПДВ', key: 'sum', width: 20 }
+  ];
+
+  // Стиль для заголовків (перший рядок)
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell((cell, colNumber) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF3F4F6' } // bg-gray-100
+    };
+    cell.font = { bold: true };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+
+  // Додаємо дані
+  parsedItems.value.forEach((item) => {
+    if (item.matchedItem) {
+      const row = worksheet.addRow({
+        name: item.matchedItem.label,
+        quantity: `${item.quantity} ${item.matchedItem.measure}`,
+        price: item.matchedItem.price,
+        sum: item.quantity * item.matchedItem.price
+      });
+
+      // Стилізуємо клітинки з даними
+      row.eachCell((cell, colNumber) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { vertical: 'middle' };
+        
+        if (colNumber === 2) cell.alignment.horizontal = 'center';
+        else if (colNumber === 3 || colNumber === 4) {
+          cell.alignment.horizontal = 'right';
+          cell.numFmt = '0.00';
+        }
+      });
+    }
+  });
+
+  // Додаємо порожній рядок для відступу
+  worksheet.addRow([]);
+
+  // Додаємо рядок "Разом"
+  const totalRow = worksheet.addRow({
+    price: 'Разом:',
+    sum: totalScreenshotSum.value
+  });
+  
+  // Об'єднуємо клітинки для слова "Разом" (від A до C)
+  worksheet.mergeCells(`A${totalRow.number}:C${totalRow.number}`);
+  
+  const mergedTotalCell = worksheet.getCell(`A${totalRow.number}`);
+  mergedTotalCell.value = 'Разом:';
+  mergedTotalCell.alignment = { horizontal: 'right', vertical: 'middle' };
+  mergedTotalCell.font = { bold: true, size: 14 };
+  
+  const sumTotalCell = worksheet.getCell(`D${totalRow.number}`);
+  sumTotalCell.value = totalScreenshotSum.value;
+  sumTotalCell.alignment = { horizontal: 'right', vertical: 'middle' };
+  sumTotalCell.font = { bold: true, size: 14 };
+  sumTotalCell.numFmt = '#,##0.00 ₴';
+
+  // Зберігаємо файл
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'skladeno_materials.xlsx';
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
 const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 const router = useRouter();
@@ -218,7 +349,24 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="flex justify-center mt-8">
+        <div class="flex justify-center mt-8 gap-4 flex-wrap">
+          <UButton
+            color="primary"
+            variant="solid"
+            size="lg"
+            label="Скріншот для клієнта"
+            icon="i-lucide-camera"
+            :loading="isScreenshotting"
+            @click="downloadScreenshot"
+          />
+          <UButton
+            color="primary"
+            variant="soft"
+            size="lg"
+            label="Експорт в Excel"
+            icon="i-lucide-file-spreadsheet"
+            @click="exportToExcel"
+          />
           <UButton
             color="neutral"
             variant="soft"
@@ -254,4 +402,37 @@ onMounted(() => {
         </div>
       </template>
     </UModal>
+
+    <!-- Схована таблиця для генерації скріншоту -->
+    <div class="fixed left-[-9999px] top-[-9999px]">
+      <div
+        id="screenshot-container"
+        class="bg-white p-6 w-[800px]"
+      >
+        <table class="w-full border-collapse border border-black text-sm font-sans">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="border border-black px-3 py-2 text-left font-bold text-black">Товар</th>
+              <th class="border border-black px-3 py-2 text-center font-bold text-black w-24">Кількість</th>
+              <th class="border border-black px-3 py-2 text-right font-bold text-black w-32">Ціна з ПДВ</th>
+              <th class="border border-black px-3 py-2 text-right font-bold text-black w-32">Сума з ПДВ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="(item, index) in parsedItems" :key="index">
+              <tr v-if="item.matchedItem">
+                <td class="border border-black px-3 py-2 text-black">{{ item.matchedItem.label }}</td>
+                <td class="border border-black px-3 py-2 text-center text-black">{{ item.quantity }} {{ item.matchedItem.measure }}</td>
+                <td class="border border-black px-3 py-2 text-right text-black">{{ item.matchedItem.price.toFixed(2) }}</td>
+                <td class="border border-black px-3 py-2 text-right text-black">{{ (item.quantity * item.matchedItem.price).toFixed(2) }}</td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="mt-4 flex justify-end gap-4 font-bold text-lg text-black pr-2">
+          <span>Разом:</span>
+          <span>{{ totalScreenshotSum.toFixed(2) }} ₴</span>
+        </div>
+      </div>
+    </div>
 </template>
